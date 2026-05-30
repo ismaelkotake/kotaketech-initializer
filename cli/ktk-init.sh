@@ -22,7 +22,7 @@ check_deps() {
   command -v jq  &>/dev/null || missing+=(jq)
 
   if [[ ${#missing[@]} -gt 0 ]]; then
-    echo "Dependências faltando: ${missing[*]}"
+    echo "Missing dependencies: ${missing[*]}"
     echo "  gum : https://github.com/charmbracelet/gum"
     echo "  jq  : sudo apt install jq  /  brew install jq"
     exit 1
@@ -38,9 +38,9 @@ load_config() {
     cat > "$CONFIG_FILE" <<EOF
 # ktk-init configuration
 #
-# TEMPLATES_SOURCE pode ser:
-#   local:/caminho/para/templates
-#   git:https://github.com/seu-user/kotaketech-initializer
+# TEMPLATES_SOURCE options:
+#   local:/path/to/templates
+#   git:https://github.com/ismaelkotake/kotaketech-initializer
 TEMPLATES_SOURCE=local:$SCRIPT_DIR/../templates
 EOF
   fi
@@ -62,16 +62,16 @@ get_templates() {
     git)
       local repo_dir="$CACHE_DIR/repo"
       if [[ -d "$repo_dir/.git" ]]; then
-        info "Atualizando templates..."
+        info "Updating templates..."
         git -C "$repo_dir" pull --quiet 2>/dev/null || true
       else
-        info "Baixando templates..."
+        info "Downloading templates..."
         git clone --quiet "$source_path" "$repo_dir"
       fi
       TEMPLATES_DIR="$repo_dir/templates"
       ;;
     *)
-      error "TEMPLATES_SOURCE inválido: $TEMPLATES_SOURCE"
+      error "Invalid TEMPLATES_SOURCE: $TEMPLATES_SOURCE"
       ;;
   esac
 
@@ -85,31 +85,31 @@ select_template() {
   local languages
   languages=$(jq -r '.[].language' "$REGISTRY" | sort -u)
 
-  SELECTED_LANG=$(echo "$languages" | gum choose --header "Escolha a linguagem:")
-  [[ -z "$SELECTED_LANG" ]] && error "Nenhuma linguagem selecionada."
+  SELECTED_LANG=$(echo "$languages" | gum choose --header "Select language:")
+  [[ -z "$SELECTED_LANG" ]] && error "No language selected."
 
   local frameworks
   frameworks=$(jq -r --arg lang "$SELECTED_LANG" \
     '.[] | select(.language == $lang) | .framework' "$REGISTRY")
 
-  SELECTED_FW=$(echo "$frameworks" | gum choose --header "Escolha o framework:")
-  [[ -z "$SELECTED_FW" ]] && error "Nenhum framework selecionado."
+  SELECTED_FW=$(echo "$frameworks" | gum choose --header "Select framework:")
+  [[ -z "$SELECTED_FW" ]] && error "No framework selected."
 
   TEMPLATE_ID=$(jq -r --arg lang "$SELECTED_LANG" --arg fw "$SELECTED_FW" \
     '.[] | select(.language == $lang and .framework == $fw) | .id' "$REGISTRY")
 
   TEMPLATE_DIR="$TEMPLATES_DIR/$TEMPLATE_ID"
-  [[ -d "$TEMPLATE_DIR" ]] || error "Template '$TEMPLATE_ID' não encontrado."
+  [[ -d "$TEMPLATE_DIR" ]] || error "Template '$TEMPLATE_ID' not found."
 }
 
 # ─── Coleta de variáveis ──────────────────────────────────────────────────────
 
 collect_vars() {
-  PROJECT_NAME=$(gum input --header "Nome do projeto:" --placeholder "meu-projeto")
-  [[ -z "$PROJECT_NAME" ]] && error "Nome do projeto é obrigatório."
+  PROJECT_NAME=$(gum input --header "Project name:" --placeholder "my-project")
+  [[ -z "$PROJECT_NAME" ]] && error "Project name is required."
 
-  OUTPUT_DIR=$(gum input --header "Diretório de saída:" --value "$(pwd)/$PROJECT_NAME")
-  [[ -z "$OUTPUT_DIR" ]] && error "Diretório de saída é obrigatório."
+  OUTPUT_DIR=$(gum input --header "Output directory:" --value "$(pwd)/$PROJECT_NAME")
+  [[ -z "$OUTPUT_DIR" ]] && error "Output directory is required."
 
   # Variáveis extras definidas pelo template
   VARS_FILE=$(mktemp)
@@ -131,7 +131,7 @@ collect_vars() {
       val=$(gum input --header "$prompt:" --value "$default")
       printf "%s=%s\n" "$name" "$val" >> "$VARS_FILE"
 
-      # PACKAGE_NAME → PACKAGE_PATH automático
+      # PACKAGE_NAME → PACKAGE_PATH (dots replaced with /)
       if [[ "$name" == "PACKAGE_NAME" ]]; then
         local pkg_path="${val//.//}"
         printf "PACKAGE_PATH=%s\n" "$pkg_path" >> "$VARS_FILE"
@@ -143,13 +143,20 @@ collect_vars() {
 # ─── Aplicação do template ────────────────────────────────────────────────────
 
 apply_template() {
-  [[ -d "$OUTPUT_DIR" ]] && error "Diretório '$OUTPUT_DIR' já existe."
+  [[ -d "$OUTPUT_DIR" ]] && error "Directory '$OUTPUT_DIR' already exists."
 
-  info "Copiando template $TEMPLATE_ID..."
+  local parent_dir
+  parent_dir="$(dirname "$OUTPUT_DIR")"
+  if [[ ! -d "$parent_dir" ]]; then
+    gum confirm "Directory '$parent_dir' does not exist. Create it?" || error "Operation cancelled."
+    mkdir -p "$parent_dir"
+  fi
+
+  info "Copying template $TEMPLATE_ID..."
   cp -r "$TEMPLATE_DIR" "$OUTPUT_DIR"
   rm -f "$OUTPUT_DIR/template.json"
 
-  # 1. Substitui variáveis no conteúdo dos arquivos
+  # 1. Replace variables in file contents
   local sed_args=()
   while IFS= read -r line; do
     local key="${line%%=*}" val="${line#*=}"
@@ -161,9 +168,9 @@ apply_template() {
     sed -i "${sed_args[@]}" "$file" 2>/dev/null || true
   done
 
-  # 2. Renomeia diretórios com variáveis no nome
-  #    Processa do mais profundo para o mais raso (-depth) para evitar conflitos.
-  #    Valores com '/' (ex: PACKAGE_PATH=com/kotaketech/app) criam hierarquia de dirs.
+  # 2. Rename directories containing variable placeholders
+  #    Processed deepest-first (-depth) to avoid conflicts.
+  #    Values with '/' (e.g. PACKAGE_PATH=com/kotaketech/app) produce a nested directory hierarchy.
   while IFS= read -r line; do
     local key="${line%%=*}" val="${line#*=}"
     [[ -z "$key" ]] && continue
@@ -180,7 +187,7 @@ apply_template() {
     done
   done < "$VARS_FILE"
 
-  # 3. Renomeia arquivos com variáveis no nome
+  # 3. Rename files containing variable placeholders in their name
   while IFS= read -r line; do
     local key="${line%%=*}" val="${line#*=}"
     [[ -z "$key" ]] && continue
@@ -193,11 +200,11 @@ apply_template() {
   done < "$VARS_FILE"
 
   # Init git
-  if gum confirm "Inicializar repositório git?"; then
+  if gum confirm "Initialize git repository?"; then
     git -C "$OUTPUT_DIR" init --quiet
     git -C "$OUTPUT_DIR" add .
     git -C "$OUTPUT_DIR" commit --quiet -m "chore: initial commit via ktk-init"
-    success "Git inicializado."
+    success "Git initialized."
   fi
 }
 
@@ -210,10 +217,10 @@ claude_enhance() {
 
   $has_claude || return 0
 
-  gum confirm "Claude detectado. Deseja uma revisão assistida do projeto gerado?" || return 0
+  gum confirm "Claude detected. Would you like an assisted review of the generated project?" || return 0
 
-  info "Passando para o Claude..."
-  claude "Acabei de criar um projeto baseado no template '$TEMPLATE_ID' em '$OUTPUT_DIR'. Analise a estrutura gerada e sugira melhorias ou ajustes relevantes para o projeto '$PROJECT_NAME'."
+  info "Handing off to Claude..."
+  claude "I just created a project based on the '$TEMPLATE_ID' template at '$OUTPUT_DIR'. Analyze the generated structure and suggest relevant improvements or adjustments for the '$PROJECT_NAME' project."
 }
 
 # ─── Comandos ─────────────────────────────────────────────────────────────────
@@ -221,15 +228,15 @@ claude_enhance() {
 cmd_update() {
   local source_type="${TEMPLATES_SOURCE%%:*}"
   if [[ "$source_type" != "git" ]]; then
-    info "Templates locais — nada para atualizar."
+    info "Local templates — nothing to update."
     return
   fi
 
   local repo_dir="$CACHE_DIR/repo"
   if [[ -d "$repo_dir/.git" ]]; then
-    info "Atualizando templates..."
+    info "Updating templates..."
     git -C "$repo_dir" pull
-    success "Templates atualizados."
+    success "Templates updated."
   else
     get_templates
   fi
@@ -239,7 +246,7 @@ cmd_list() {
   load_config
   get_templates
   echo ""
-  gum style --bold "Templates disponíveis:"
+  gum style --bold "Available templates:"
   echo ""
   jq -r '.[] | "  \(.language) \(.version // "") — \(.framework)  [\(.id)]"' "$REGISTRY"
   echo ""
@@ -254,18 +261,18 @@ main() {
     version) echo "ktk-init v$VERSION"; exit 0 ;;
     help|-h|--help)
       cat <<EOF
-ktk-init v$VERSION — Inicializador de projetos KotakeTech
+ktk-init v$VERSION — KotakeTech project initializer
 
-Uso: ktk-init [comando]
+Usage: ktk-init [command]
 
-Comandos:
-  (sem argumento)   Criar novo projeto interativamente
-  list              Listar templates disponíveis
-  update            Atualizar templates do repositório remoto
-  version           Exibir versão
-  help              Esta mensagem
+Commands:
+  (no argument)     Create a new project interactively
+  list              List available templates
+  update            Update templates from remote repository
+  version           Show version
+  help              Show this message
 
-Configuração: $CONFIG_FILE
+Config: $CONFIG_FILE
 EOF
       exit 0 ;;
   esac
@@ -288,7 +295,7 @@ EOF
   claude_enhance
 
   echo ""
-  success "Projeto '$PROJECT_NAME' criado em $OUTPUT_DIR"
+  success "Project '$PROJECT_NAME' created at $OUTPUT_DIR"
 }
 
 main "$@"

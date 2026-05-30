@@ -4,6 +4,6 @@
     "language": "Java",
     "version": "21",
     "framework": "Spring Boot",
-    "description": "Java 21 com Spring Boot 3.x, Maven, Docker e estrutura padrão KotakeTech"
+    "description": "Java 21 with Spring Boot 3.x, Maven, Docker and KotakeTech standard structure"
   }
 ]

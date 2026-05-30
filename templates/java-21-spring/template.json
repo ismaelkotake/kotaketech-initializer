@@ -7,17 +7,17 @@
     },
     {
       "name": "PACKAGE_NAME",
-      "prompt": "Package base Java (ex: com.kotaketech.meuservico)",
-      "default": "com.kotaketech.meuservico"
+      "prompt": "Base Java package (e.g. com.kotaketech.myservice)",
+      "default": "com.kotaketech.myservice"
     },
     {
       "name": "DESCRIPTION",
-      "prompt": "Descrição do projeto",
-      "default": "Serviço gerado via ktk-init"
+      "prompt": "Project description",
+      "default": "Service generated via ktk-init"
     },
     {
       "name": "KOTAKE_VERSION",
-      "prompt": "Versão do kotake-parent",
+      "prompt": "kotake-parent version",
       "default": "1.0.0-SNAPSHOT"
     }
   ]
