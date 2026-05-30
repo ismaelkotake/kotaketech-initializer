@@ -1,0 +1,126 @@
+openapi: 3.0.3
+info:
+  title: {{PROJECT_NAME}} API
+  description: {{DESCRIPTION}}
+  version: 0.0.1
+
+servers:
+  - url: http://localhost:8080
+    description: Local
+
+tags:
+  - name: Item
+    description: Item management
+
+paths:
+  /api/v1/items:
+    get:
+      tags: [Item]
+      summary: List all items
+      operationId: listItems
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ItemResponse'
+
+    post:
+      tags: [Item]
+      summary: Create item
+      operationId: createItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateItemRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResponse'
+
+  /api/v1/items/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags: [Item]
+      summary: Get item by id
+      operationId: getItem
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResponse'
+        '404':
+          description: Not found
+
+    put:
+      tags: [Item]
+      summary: Update item
+      operationId: updateItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateItemRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResponse'
+
+    delete:
+      tags: [Item]
+      summary: Delete item
+      operationId: deleteItem
+      responses:
+        '204':
+          description: Deleted
+
+components:
+  schemas:
+    CreateItemRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          example: My Item
+        description:
+          type: string
+          example: Item description
+
+    ItemResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time

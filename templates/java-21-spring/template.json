@@ -1,0 +1,24 @@
+{
+  "variables": [
+    {
+      "name": "GROUP_ID",
+      "prompt": "Maven groupId",
+      "default": "com.kotaketech"
+    },
+    {
+      "name": "PACKAGE_NAME",
+      "prompt": "Package base Java (ex: com.kotaketech.meuservico)",
+      "default": "com.kotaketech.meuservico"
+    },
+    {
+      "name": "DESCRIPTION",
+      "prompt": "Descrição do projeto",
+      "default": "Serviço gerado via ktk-init"
+    },
+    {
+      "name": "KOTAKE_VERSION",
+      "prompt": "Versão do kotake-parent",
+      "default": "1.0.0-SNAPSHOT"
+    }
+  ]
+}
