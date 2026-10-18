@@ -1,3 +1,5 @@
-# Ignora arquivos de scaffold gerados que conflitam com a aplicação
+# Ignore generated scaffold files that conflict with the application
 **/OpenApiGeneratorApplication.java
 **/RFC3339DateFormat.java
+# Generated controllers share the presentation package with the hand-written ones
+**/*Controller.java
