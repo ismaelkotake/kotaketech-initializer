@@ -34,7 +34,7 @@ gh pr create --base develop
    ```
 2. Set the version and update the changelog:
    ```bash
-   mvn versions:set -DnewVersion=X.Y.Z -DgenerateBackupPoms=false
+   ./mvnw versions:set -DnewVersion=X.Y.Z -DgenerateBackupPoms=false
    ```
    Move the `[Unreleased]` entries in `CHANGELOG.md` to a new `[X.Y.Z] - YYYY-MM-DD` section.
    Only bug fixes and release-related changes go into this branch.
@@ -51,7 +51,7 @@ gh pr create --base develop
    ```bash
    git checkout develop && git pull
    git merge --no-ff origin/main
-   mvn versions:set -DnewVersion=X.Y.(Z+1)-SNAPSHOT -DgenerateBackupPoms=false
+   ./mvnw versions:set -DnewVersion=X.Y.(Z+1)-SNAPSHOT -DgenerateBackupPoms=false
    git commit -am "chore: start next development version"
    git push
    ```

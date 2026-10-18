@@ -113,3 +113,5 @@ The kotake artifacts are resolved from GitHub Packages (`<repositories>` in the 
 ### Git Flow and CI
 
 The template ships thin caller workflows in `.github/workflows/` that delegate to the shared reusable workflows in [`ismaelkotake/workflows`](https://github.com/ismaelkotake/workflows) (`@v1`): `ci.yml`, `claude.yml`, `claude-code-review.yml`. `RELEASING.md` documents the Git Flow release process. Workflow files use `${{ ... }}` (with spaces), which never matches the `{{VAR_NAME}}` placeholders.
+
+The template includes the Maven Wrapper (`mvnw`, `mvnw.cmd`, `.mvn/`, pinned to Maven 3.9.16 with SHA-256 check), so generated projects only need Java 21. `.gitattributes` (repo root and template) keeps `mvnw`/`*.sh` as LF and `*.cmd` as CRLF; `ktk-init` marks `mvnw` executable in the initial commit.
