@@ -24,6 +24,15 @@
         <openapi.generator.model.package>{{PACKAGE_NAME}}.presentation.model</openapi.generator.model.package>
     </properties>
 
+    <!-- GitHub Packages — resolves kotake-parent, kotake-bom and kotake-core.
+         Requires a <server> with id "github" in ~/.m2/settings.xml (token with read:packages). -->
+    <repositories>
+        <repository>
+            <id>github</id>
+            <url>https://maven.pkg.github.com/ismaelkotake/spring-parent-java21</url>
+        </repository>
+    </repositories>
+
     <dependencies>
 
         <!-- Kotake Core — auto-configurations (auditing, etc.) -->

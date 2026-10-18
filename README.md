@@ -12,6 +12,10 @@ KotakeTech project initializer. Generates project scaffolds from versioned templ
 
 > **No sudo?** Download static binaries for `gum` and `jq` and place them in `~/.local/bin`.
 
+Optional: [`gh`](https://cli.github.com/) (authenticated) — creates the GitHub repository with Git Flow
+(`develop` as default branch) and sets the `CLAUDE_CODE_OAUTH_TOKEN` and `PACKAGES_TOKEN` secrets.
+Both secrets are read from environment variables of the same name when set, otherwise prompted.
+
 ## Installation
 
 ```bash
