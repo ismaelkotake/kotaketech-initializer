@@ -164,7 +164,8 @@ apply_template() {
     sed_args+=(-e "s|{{${key}}}|${val}|g")
   done < "$VARS_FILE"
 
-  find "$OUTPUT_DIR" -type f | while read -r file; do
+  # Only rewrite files that contain placeholders, so others (e.g. mvnw.cmd) keep their line endings
+  { grep -rlF '{{' "$OUTPUT_DIR" || true; } | while read -r file; do
     sed -i "${sed_args[@]}" "$file" 2>/dev/null || true
   done
 
@@ -203,6 +204,8 @@ apply_template() {
   if gum confirm "Initialize git repository?"; then
     git -C "$OUTPUT_DIR" init --quiet --initial-branch=main
     git -C "$OUTPUT_DIR" add .
+    # Keep the Maven Wrapper executable even where core.fileMode is false (e.g. Windows)
+    [[ -f "$OUTPUT_DIR/mvnw" ]] && git -C "$OUTPUT_DIR" update-index --chmod=+x mvnw
     git -C "$OUTPUT_DIR" commit --quiet -m "chore: initial commit via ktk-init"
     success "Git initialized."
   fi
