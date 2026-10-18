@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="0.1.0"
+VERSION="0.2.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$HOME/.config/ktk-init"
 CONFIG_FILE="$CONFIG_DIR/config"
@@ -201,11 +201,60 @@ apply_template() {
 
   # Init git
   if gum confirm "Initialize git repository?"; then
-    git -C "$OUTPUT_DIR" init --quiet
+    git -C "$OUTPUT_DIR" init --quiet --initial-branch=main
     git -C "$OUTPUT_DIR" add .
     git -C "$OUTPUT_DIR" commit --quiet -m "chore: initial commit via ktk-init"
     success "Git initialized."
   fi
+}
+
+# ─── GitHub (optional) ────────────────────────────────────────────────────────
+# Creates the GitHub repository, sets up Git Flow (develop as default branch)
+# and the secrets used by the shared workflows in ismaelkotake/workflows.
+
+set_repo_secret() {
+  local repo="$1" name="$2" hint="$3" value="${!2:-}"
+
+  if [[ -z "$value" ]]; then
+    value=$(gum input --password --header "$name ($hint) — leave empty to skip:")
+  fi
+
+  if [[ -z "$value" ]]; then
+    info "Skipped $name. Set it later with: gh secret set $name -R $repo"
+    return 0
+  fi
+
+  printf '%s' "$value" | gh secret set "$name" -R "$repo"
+  success "Secret $name set."
+}
+
+setup_github() {
+  [[ -d "$OUTPUT_DIR/.git" ]] || return 0
+
+  if ! command -v gh &>/dev/null; then
+    info "GitHub CLI (gh) not found — skipping GitHub setup."
+    return 0
+  fi
+
+  gum confirm "Create GitHub repository with Git Flow (develop as default branch)?" || return 0
+
+  local owner visibility description repo
+  owner=$(gh api user -q .login) || error "gh is not authenticated. Run: gh auth login"
+  visibility=$(gum choose --header "Repository visibility:" private public)
+  description=$(grep -m1 '^DESCRIPTION=' "$VARS_FILE" | cut -d= -f2- || true)
+  repo="$owner/$PROJECT_NAME"
+
+  info "Creating $repo..."
+  gh repo create "$repo" "--$visibility" --description "$description" \
+    --source "$OUTPUT_DIR" --remote origin --push
+
+  git -C "$OUTPUT_DIR" checkout --quiet -b develop
+  git -C "$OUTPUT_DIR" push --quiet -u origin develop
+  gh repo edit "$repo" --default-branch develop --delete-branch-on-merge >/dev/null
+  success "Repository $repo created (default branch: develop)."
+
+  set_repo_secret "$repo" CLAUDE_CODE_OAUTH_TOKEN "from: claude setup-token"
+  set_repo_secret "$repo" PACKAGES_TOKEN "PAT with read:packages, for kotake-parent"
 }
 
 # ─── Claude (opcional) ────────────────────────────────────────────────────────
@@ -292,6 +341,7 @@ EOF
   select_template
   collect_vars
   apply_template
+  setup_github
   claude_enhance
 
   echo ""

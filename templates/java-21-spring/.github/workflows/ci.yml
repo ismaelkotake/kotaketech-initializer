@@ -1,0 +1,17 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, 'release/**', 'hotfix/**']
+  pull_request:
+    branches: [main, develop, 'release/**', 'hotfix/**']
+
+jobs:
+  build:
+    uses: ismaelkotake/workflows/.github/workflows/maven-ci.yml@v1
+    permissions:
+      contents: read
+      packages: read
+    secrets:
+      # PAT with read:packages — required to resolve kotake-parent from the private spring-parent-java21 repository
+      PACKAGES_TOKEN: ${{ secrets.PACKAGES_TOKEN }}

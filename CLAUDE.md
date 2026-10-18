@@ -25,6 +25,7 @@ bash cli/install.sh     # installs to ~/.local/bin and writes ~/.config/ktk-init
 `install.sh` automatically sets `TEMPLATES_SOURCE=local:<repo>/templates` in the config, so no manual config is needed for local development.
 
 Dependencies required: `gum` (charmbracelet), `jq`, `git`. Both can be installed as static binaries into `~/.local/bin` without sudo.
+Optional: `gh` (authenticated) for the GitHub repository setup step.
 
 ## Architecture
 
@@ -41,7 +42,8 @@ Dependencies required: `gum` (charmbracelet), `jq`, `git`. Both can be installed
 main → check_deps → load_config → get_templates
      → select_template (gum menus driven by registry.json)
      → collect_vars    (PROJECT_NAME + template.json variables)
-     → apply_template  (copy → sed substitution → dir/file rename)
+     → apply_template  (copy → sed substitution → dir/file rename → optional git init on main)
+     → setup_github    (optional, needs gh: create repo, push, develop as default branch, set secrets)
      → claude_enhance  (optional, only if claude CLI or ANTHROPIC_API_KEY is present)
 ```
 
@@ -105,3 +107,9 @@ Package structure follows Hexagonal Architecture + DDD:
 The `swagger.yml` in `src/main/resources/` activates the `openapi-generate` Maven profile from `kotake-parent` automatically, generating delegate interfaces into `presentation/`. The `.openapi-generator-ignore` file excludes scaffold classes that would conflict with the application.
 
 `kotake-core` is included as a dependency and auto-activates `@EnableJpaAuditing` when a `DataSource` is on the classpath.
+
+The kotake artifacts are resolved from GitHub Packages (`<repositories>` in the template `pom.xml`), which needs a `github` server with a `read:packages` token in `~/.m2/settings.xml` locally and the `PACKAGES_TOKEN` secret in CI.
+
+### Git Flow and CI
+
+The template ships thin caller workflows in `.github/workflows/` that delegate to the shared reusable workflows in [`ismaelkotake/workflows`](https://github.com/ismaelkotake/workflows) (`@v1`): `ci.yml`, `claude.yml`, `claude-code-review.yml`. `RELEASING.md` documents the Git Flow release process. Workflow files use `${{ ... }}` (with spaces), which never matches the `{{VAR_NAME}}` placeholders.
